@@ -3,9 +3,9 @@ package com.advocacia.api.controllers;
 import com.advocacia.api.services.IArchiveService;
 import com.advocacia.api.domain.archive.Archive;
 
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +21,11 @@ import java.util.Optional;
 @RequestMapping("/api")
 public class ArchiveController {
 
-    final IArchiveService archiveService;
+    @Autowired
+    private IArchiveService archiveService;
+
+    public ArchiveController() {
+    }
 
     public ArchiveController(IArchiveService archiveService) {
         this.archiveService = archiveService;
@@ -50,10 +54,17 @@ public class ArchiveController {
         return ResponseEntity.status(HttpStatus.OK).body(archiveService.findByPath(path));
     }
 
+    @GetMapping("/download")
+    public ResponseEntity<Resource> downloadFile(@RequestParam("path") String filePath) {
+        Resource file = archiveService.loadFileAsResource(filePath);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFilename() + "\"")
+                .body(file);
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Object> findById(@PathVariable(value = "id") String id){
-        Optional<Archive> file = archiveService.findById(id);
-        return file.<ResponseEntity<Object>>map(value -> ResponseEntity.status(HttpStatus.OK).body(value)).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Arquivo não encontrado!"));
+    public ResponseEntity<Archive> getArchive(@PathVariable Long id) {
+        return ResponseEntity.ok(archiveService.findById(id));
     }
 
     @GetMapping("/name")

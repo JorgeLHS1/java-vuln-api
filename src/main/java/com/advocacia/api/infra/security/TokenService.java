@@ -1,10 +1,13 @@
 package com.advocacia.api.infra.security;
 
 import com.advocacia.api.domain.user.User;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -14,11 +17,11 @@ import java.time.ZoneOffset;
 import java.util.*;
 import java.util.regex.Pattern;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import io.jsonwebtoken.Jwt;
 
 @Service
 public class TokenService {
-    private String secret = "0123456789012345678901234567890101234567890123456789012345678901";
+    @Value("${api.security.token.secret}")
+    private String secret;
 
     public String generateToken(User user){
         try{
@@ -28,7 +31,7 @@ public class TokenService {
                     .setSubject(user.getLogin())
                     .claim("role", String.valueOf(user.getRole()))
                     .setExpiration(Date.from(genExpirationDate()))
-                    .signWith(SignatureAlgorithm.HS256, secret)
+                    .signWith(SignatureAlgorithm.HS256, secret != null ? secret : "0123456789012345678901234567890101234567890123456789012345678901")
                     .compact();
 
         } catch (JWTCreationException exception) {
@@ -36,23 +39,15 @@ public class TokenService {
         }
     }
 
-    public Authentication validateToken(String token){
+    public String validateToken(String token) {
         try {
-            Jwt jwt = Jwts.parser()
-                    .setSigningKey(secret)
-                    .parse(token);
-
-            String body = jwt.getBody().toString();
-
-
-            String subject = extractValue(body, "sub=([\\w|-]+)");
-            String role = extractValue(body, "role=([\\w|-]+)");
-
-            List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
-
-            return new UsernamePasswordAuthenticationToken(subject, null, authorities);
-        } catch (JWTVerificationException exception){
-            throw new RuntimeException("Falha ao extrair dados do token", exception);
+            Algorithm algorithm = Algorithm.HMAC256(secret != null ? secret : "fallback-secret-12345");
+            return JWT.require(algorithm)
+                .build()
+                .verify(token)
+                .getSubject();
+        } catch (JWTVerificationException exception) {
+            return "";
         }
     }
 
