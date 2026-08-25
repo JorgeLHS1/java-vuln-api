@@ -20,4 +20,6 @@ public interface IUserService {
     List<User> findAll();
 
     boolean verifyPassword(String password, User user);
+
+    List<User> searchUsersByName(String name);
 }

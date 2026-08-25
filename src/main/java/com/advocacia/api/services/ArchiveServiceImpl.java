@@ -2,6 +2,9 @@ package com.advocacia.api.services;
 
 import com.advocacia.api.domain.archive.Archive;
 import com.advocacia.api.repositories.ArchiveRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,10 +21,14 @@ import java.io.File;
 @Service
 public class ArchiveServiceImpl implements IArchiveService {
 
-    final ArchiveRepository archiveRepository;
+    @Autowired
+    private ArchiveRepository archiveRepository;
 
     private String destSendDocument = Paths.get("").toAbsolutePath().toString();
     private String destModel = Paths.get("").toAbsolutePath().toString();
+
+    public ArchiveServiceImpl() {
+    }
 
     public ArchiveServiceImpl(ArchiveRepository archiveRepository) {
         this.archiveRepository = archiveRepository;
@@ -35,6 +42,22 @@ public class ArchiveServiceImpl implements IArchiveService {
     @Override
     public Optional<Archive> findById(String id) {
         return archiveRepository.findById(id);
+    }
+
+    @Override
+    public Archive findById(Long id) {
+        return archiveRepository.findById(String.valueOf(id)).orElse(null);
+    }
+
+    @Override
+    public Resource loadFileAsResource(String filePath) {
+        try {
+            Path path = Paths.get("/var/app/uploads/").resolve(filePath);
+            Resource resource = new UrlResource(path.toUri());
+            return resource;
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao carregar arquivo: " + e.getMessage(), e);
+        }
     }
 
     @Override
