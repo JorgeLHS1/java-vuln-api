@@ -1,10 +1,13 @@
 package com.advocacia.api.infra.security;
 
 import com.advocacia.api.domain.user.User;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -18,7 +21,8 @@ import io.jsonwebtoken.Jwt;
 
 @Service
 public class TokenService {
-    private String secret = "0123456789012345678901234567890101234567890123456789012345678901";
+    @Value("${api.security.token.secret:0123456789012345678901234567890101234567890123456789012345678901}")
+    private String secret;
 
     public String generateToken(User user){
         try{
@@ -37,6 +41,9 @@ public class TokenService {
     }
 
     public Authentication validateToken(String token){
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException("JWT secret não está configurado.");
+        }
         try {
             Jwt jwt = Jwts.parser()
                     .setSigningKey(secret)
@@ -53,6 +60,22 @@ public class TokenService {
             return new UsernamePasswordAuthenticationToken(subject, null, authorities);
         } catch (JWTVerificationException exception){
             throw new RuntimeException("Falha ao extrair dados do token", exception);
+        }
+    }
+
+    public String validateTokenSubject(String token) {
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException("Secret JWT não configurado.");
+        }
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            return JWT.require(algorithm)
+                    .withIssuer("auth-api")
+                    .build()
+                    .verify(token)
+                    .getSubject();
+        } catch (JWTVerificationException exception) {
+            return "";
         }
     }
 

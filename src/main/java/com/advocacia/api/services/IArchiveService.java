@@ -16,6 +16,7 @@ public interface IArchiveService {
     void deleteById(String id);
     List<Archive> findAllModel();
     String readArchive(String name);
+    org.springframework.core.io.Resource loadFileAsResource(String filePath);
 
     boolean archiveExists(String name);
 }

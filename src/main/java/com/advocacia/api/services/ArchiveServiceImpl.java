@@ -2,6 +2,8 @@ package com.advocacia.api.services;
 
 import com.advocacia.api.domain.archive.Archive;
 import com.advocacia.api.repositories.ArchiveRepository;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -116,5 +118,26 @@ public class ArchiveServiceImpl implements IArchiveService {
     public boolean archiveExists(String name) {
         Archive archive = archiveRepository.findByName(name);
         return archive != null;
+    }
+
+    @Override
+    public Resource loadFileAsResource(String filePath) {
+        try {
+            Path basePath = Paths.get("/var/app/uploads/").toAbsolutePath().normalize();
+            Path path = basePath.resolve(filePath).toAbsolutePath().normalize();
+
+            if (!path.startsWith(basePath)) {
+                throw new SecurityException("Acesso negado: Tentativa de Path Traversal detectada.");
+            }
+
+            Resource resource = new UrlResource(path.toUri());
+            if (resource.exists() || resource.isReadable()) {
+                return resource;
+            } else {
+                throw new RuntimeException("Arquivo não encontrado ou não pode ser lido: " + filePath);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao carregar arquivo: " + e.getMessage(), e);
+        }
     }
 }

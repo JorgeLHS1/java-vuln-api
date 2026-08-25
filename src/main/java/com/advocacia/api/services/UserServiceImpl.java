@@ -3,6 +3,8 @@ package com.advocacia.api.services;
 import com.advocacia.api.domain.user.User;
 import com.advocacia.api.infra.security.Pass;
 import com.advocacia.api.repositories.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +13,9 @@ import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements IUserService{
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     final UserRepository userRepository;
     final Pass pass;
@@ -53,5 +58,13 @@ public class UserServiceImpl implements IUserService{
     @Override
     public boolean verifyPassword(String password, User user) {
         return pass.matches(password, user.getPassword());
+    }
+
+    @Override
+    public List<User> searchUsersByName(String name) {
+        String query = "SELECT * FROM users WHERE name LIKE :name";
+        return entityManager.createNativeQuery(query, User.class)
+                .setParameter("name", "%" + name + "%")
+                .getResultList();
     }
 }
